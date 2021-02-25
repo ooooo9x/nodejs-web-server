@@ -12,10 +12,15 @@ const workerService = require("../../src/service/WorkerService");
  * @param startId:上一把数据最后一条的id
  */
 router.get("/getFaceRecUserImg", (req, res) => {
+  // let ip = req.get("X-Real-IP") == null ? req.ip : req.get("X-Real-IP"),
+  //   startId = req.query.startId,
+  //   pageSize = req.query.pageSize;
+  // workerService.getFaceRecUserImg(startId, pageSize, ip).then((result) => {
+  //   res.send(result);
+  // });
   let ip = req.get("X-Real-IP") == null ? req.ip : req.get("X-Real-IP"),
-    startId = req.query.startId,
     pageSize = req.query.pageSize;
-  workerService.getFaceRecUserImg(startId, pageSize, ip).then((result) => {
+  workerService.getFaceRecUserImg1(pageSize, ip).then((result) => {
     res.send(result);
   });
 });

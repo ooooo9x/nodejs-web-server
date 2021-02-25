@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const operateLogService = require("../../src/service/OperateLogService");
 // Service
 const userService = require("../../src/service/UserService");
+const requestIp = require('request-ip');
 
 /**
  * 用户登录
@@ -29,8 +31,10 @@ router.get("/searchGroupsByUserName", (req, res) => {
  * 批量删除用户
  */
 router.delete("/deleteUser", (req, res) => {
-  let ids = req.body.ids;
-  userService.deleteUserByIds(ids).then((result) => {
+  let ids = req.body.ids,
+    currentUser = req.user.userName,
+    ip = requestIp.getClientIp(req);
+  userService.deleteUserByIds(ids, currentUser, ip).then((result) => {
     res.send(result);
   });
 });
@@ -39,27 +43,35 @@ router.delete("/deleteUser", (req, res) => {
  * 修改用户信息
  */
 router.put("/editUser", (req, res) => {
-  let id = req.body.id;
-  let cnName = req.body.cnName;
-  let roleCode = req.body.roleCode;
-  let groupId = req.body.groupId;
-  userService.updateUser(id, cnName, roleCode, groupId).then((result) => {
-    res.send(result);
-  });
+  let id = req.body.id,
+    cnName = req.body.cnName,
+    roleCode = req.body.roleCode,
+    groupId = req.body.groupId,
+    currentUser = req.user.userName,
+    ip = requestIp.getClientIp(req);
+  userService
+    .updateUser(id, cnName, roleCode, groupId, currentUser, ip)
+    .then((result) => {
+      res.send(result);
+    });
 });
 
 /**
  * 新增用户
  */
 router.put("/addUser", (req, res) => {
-  let userName = req.body.userName;
-  let cnName = req.body.cnName;
-  let pwd = req.body.pwd;
-  let roleCode = req.body.roleCode;
-  let groupId = req.body.groupId;
-  userService.save(userName, cnName, pwd, roleCode, groupId).then((result) => {
-    res.send(result);
-  });
+  let userName = req.body.userName,
+    cnName = req.body.cnName,
+    pwd = req.body.pwd,
+    roleCode = req.body.roleCode,
+    groupId = req.body.groupId,
+    currentUser = req.user.userName,
+    ip = requestIp.getClientIp(req);
+  userService
+    .save(userName, cnName, pwd, roleCode, groupId, currentUser, ip)
+    .then((result) => {
+      res.send(result);
+    });
 });
 
 /**
@@ -164,11 +176,15 @@ router.get("/getUserById", (req, res) => {
  */
 router.post("/changePwd", (req, res) => {
   let userName = req.body.userName,
-    pwd = req.body.pwd;
+    pwd = req.body.pwd,
+    currentUser = req.user.userName,
+    ip = requestIp.getClientIp(req);
 
-  userService.changePwdByUserName(userName, pwd).then((result) => {
-    res.send(result);
-  });
+  userService
+    .changePwdByUserName(userName, pwd, currentUser, ip)
+    .then((result) => {
+      res.send(result);
+    });
 });
 
 /**
@@ -191,6 +207,23 @@ router.get("/checkCaptcha", (req, res) => {
     captcha = req.session.captcha;
   let result = userService.checkCaptcha(text, captcha);
   res.send(result);
+});
+
+/**
+ * 分页查询操作日志
+ */
+router.get("/searchOperateLog", (req, res) => {
+  let params = {
+    userName: req.query.userName,
+    ip: req.query.ip,
+    startTime: req.query.startTime,
+    endTime: req.query.endTime,
+    pageSize: req.query.pageSize,
+    pageNum: req.query.pageNum,
+  };
+  operateLogService.pageByOperateLog(params).then((result) => {
+    res.send(result);
+  });
 });
 
 module.exports = router;

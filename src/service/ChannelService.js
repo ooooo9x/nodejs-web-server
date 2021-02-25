@@ -9,7 +9,6 @@ const {
   service_Path,
   speed,
   network_ip,
-  rtmp_screenshot_path,
   ffmpeg_exe_path,
 } = require("../../config/config");
 
@@ -419,7 +418,7 @@ class ChannelService {
     }
 
     //判断dcn网络转换IP
-    if(ip.indexOf(network_ip.Intranet)===-1){
+    if(ip.indexOf(network_ip.Intranet)===-1 && data){
       network_ip.stream.map((item) => {
         if (data.address.indexOf( item.Intranet)>-1) {
           let paly_url = data.address;
@@ -444,7 +443,7 @@ class ChannelService {
       return res.fail("摄像头code为空").toString();
     }
 
-    let url = `${service_Path}vpm/liveStream/${channelCode}/rtmp/0`;
+    let url = `${service_Path}vpm/liveStream/${channelCode}/http-flv/0/pull`;
 
     logger.info(`发送请求到: ${url}`);
 
@@ -455,7 +454,7 @@ class ChannelService {
       return res.fail("查询失败").toString();
     }
 
-    if(ip.indexOf(network_ip.Intranet)===-1){
+    if(ip.indexOf(network_ip.Intranet)===-1 && data){
       network_ip.stream.map((item) => {
         if (data.address.indexOf( item.Intranet)>-1) {
           let paly_url = data.address;
@@ -551,49 +550,6 @@ class ChannelService {
     }
 
     return res.success(result).toString();
-
-    // let selectSql = `SELECT area_id as id, area_name as name from anhui_res_area`,
-    //   res = new Response();
-
-    // if (textUtils.isNotEmpty(areaId)) {
-    //   selectSql += ` AND area_id = ${areaId}`;
-    // }
-    // logger.debug(`查询所有市Id sql: ${selectSql}`);
-    // let [err, data] = await mysqlDB.select(selectSql);
-    // if (err) {
-    //   logger.error(`查询所有市出错: err = ${err.message}`);
-    //   return res.fail("统计出错").toString();
-    // }
-    // let result = [];
-    // for (let i = 0; i < data.length; i++) {
-    //   let countOnlineSql = ` SELECT area.area_name,count.count FROM anhui_res_area area,
-    //     (SELECT count(1) as count from channel c,(
-    //     SELECT device_id from anhui_room_device_r where room_id in(
-    //     SELECT room_id FROM anhui_res_room where site_id in (
-    //     SELECT site_id FROM anhui_res_site where subarea_id in(
-    //     SELECT subarea_id from anhui_res_subarea where area_id =${data[i].id}  )  )  )
-    //     ) r where c.channel_id=r.device_id and c.channel_online=1) count where area.area_id=${data[i].id};`;
-    //   let countTotalOnlineSql = `SELECT area.area_name,count.count FROM anhui_res_area area,
-    //     (SELECT count(1) as count from channel c,(
-    //     SELECT device_id from anhui_room_device_r where room_id in(
-    //     SELECT room_id FROM anhui_res_room where site_id in (
-    //     SELECT site_id FROM anhui_res_site where subarea_id in(
-    //     SELECT subarea_id from anhui_res_subarea where area_id =${data[i].id}  )  )  )
-    //     ) r where c.channel_id=r.device_id ) count where area.area_id=${data[i].id};`;
-    //   let [err1, countOn] = await mysqlDB.select(countOnlineSql);
-    //   let [err2, countTotal] = await mysqlDB.select(countTotalOnlineSql);
-    //   if (err1 || err2) {
-    //     logger.error(`统计所有市出错: err1 = ${err1};err2 = ${err2}`);
-    //     return res.fail("统计出错").toString();
-    //   }
-    //   let count = {
-    //     areaName: countOn[0].area_name,
-    //     online: countOn[0].count,
-    //     totalOnline: countTotal[0].count,
-    //   };
-    //   result.push(count);
-    // }
-    // return res.success(result).toString();
   }
 
   /**
@@ -674,6 +630,81 @@ class ChannelService {
     let cIdAry = cIds.split(",");
 
     return res.success({ channel_ids: cIdAry }).toString();
+  }
+
+  /**
+   * 查询摄像头关联的设备
+   * @param {String} channelId 摄像头channel_id
+   */
+  async queryBindDeviceByChannelId(channelId) {
+    let res = new Response();
+    let selectSql = `select device_id, device_name from anhui_res_device where channel_id = '${channelId}'`;
+    logger.debug(`查询摄像头关联的设备sql: ${selectSql}`);
+    let [err, result] = await mysqlDB.execute(selectSql);
+    if (err) {
+      console.log(
+        `查询摄像头: channelId = ${channelId} 关联的设备出错: err = ${err.message}`
+      );
+      return res.fail("未查询到该摄像头关联的设备").toString();
+    }
+
+    return res.success(result).toString();
+  }
+
+  /**
+   * 查询摄像头所属机房未被关联的设备
+   * @param {String} channelId 摄像头channel_id
+   */
+  async queryUnBindDeviceByChannelId(channelId) {
+    let res = new Response();
+    let selectSql = `select device_id, device_name from anhui_res_device 
+      where room_id in (SELECT r.room_id FROM anhui_res_room r, device d, channel c, anhui_room_device_r rdr 
+      WHERE r.room_id = rdr.room_id AND d.code_id = rdr.device_id AND c.channel_bearea = d.device_id 
+      AND c.channel_id = '${channelId}') and (frame_id is null or frame_id = '')
+      and (channel_id is null or channel_id = '')`
+    logger.debug(`查询摄像头所属机房未被关联的设备sql: ${selectSql}`);
+    let [err, result] = await mysqlDB.execute(selectSql);
+    if (err) {
+      console.log(
+        `查询摄像头: channelId = ${channelId} 所属机房未被关联的设备出错: err = ${err.message}`
+      );
+      return res.fail("未查询到该摄像头所属机房未被关联的设备").toString();
+    }
+
+    return res.success(result).toString();
+  }
+
+  /**
+   * 更新摄像头关联的设备
+   * @param {String} channelId 摄像头channel_id
+   * @param {Array} addList 关联的设备
+   * @param {Array} delList 取消关联的设备
+   */
+  async updateChannelBindDevices(channelId, addList, delList) {
+    let res = new Response();
+    let addSql = "",
+      delSql = "";
+    if (addList && addList.length > 0) {
+      addSql = `update anhui_res_device set channel_id = '${channelId}' where device_id in (${addList.join(
+        ","
+      )});`;
+    }
+    if (delList && delList.length > 0) {
+      delSql = `update anhui_res_device set channel_id = null where device_id in (${delList.join(
+        ","
+      )})`;
+    }
+    let updateSql = `${addSql}${delSql}`;
+    logger.debug(`更新摄像头关联的设备sql: ${updateSql}`);
+    let [err, _] = await mysqlDB.execute(updateSql);
+    if (err) {
+      logger.error(
+        `更新摄像头: channelId = ${channelId} 关联的设备出错: err = ${err.message}`
+      );
+      return res.fail("更新摄像头关联的设备失败").toString();
+    }
+
+    return res.success(null, "更新摄像头关联的设备成功").toString();
   }
 
   /**

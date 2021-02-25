@@ -17,10 +17,12 @@ class FeameService {
   async queryUnbindDeviceByRoomId(roomId) {
     let res = new Response();
     let selectSql = `select device_id, device_name from anhui_res_device 
-          where room_id = ${roomId} and  frame_id is null or frame_id = ''`;
+      where room_id = ${roomId} and (frame_id is null or frame_id = '')
+      and (channel_id is null or channel_id = '')`;
+    logger.debug(`查询机房下未被关联的设备sql: ${selectSql}`);
     let [err, result] = await mysqlDB.execute(selectSql);
     if (err) {
-      console.log(
+      logger.error(
         `查询机房: roomId = ${roomId} 下未被机架关联的设备出错: err = ${err.message}`
       );
       res.fail("该机房下未查询到未被关联的设备");
@@ -38,9 +40,10 @@ class FeameService {
   async queryBindDeviceByFrameId(frameId) {
     let res = new Response();
     let selectSql = `select device_id, device_name from anhui_res_device where frame_id = ${frameId}`;
+    logger.debug(`查询机架关联的设备sql: ${selectSql}`);
     let [err, result] = await mysqlDB.execute(selectSql);
     if (err) {
-      console.log(
+      logger.error(
         `查询机架: frameId = ${frameId} 关联的设备出错: err = ${err.message}`
       );
       res.fail("未查询到该机架关联的设备");
@@ -72,10 +75,10 @@ class FeameService {
       )})`;
     }
     let updateSql = `${addSql}${delSql}`;
-    console.log(`更新机架关联的设备sql: ${updateSql}`);
+    logger.debug(`更新机架关联的设备sql: ${updateSql}`);
     let [err, _] = await mysqlDB.execute(updateSql);
     if (err) {
-      console.log(
+      logger.error(
         `更新机架: frameId = ${frameId} 关联的设备出错: err = ${err.message}`
       );
       res.fail("更新机架关联的设备失败");

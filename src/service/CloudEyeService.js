@@ -108,7 +108,7 @@ class CloudEyeService {
       res = new Response(),
       insertSql = `INSERT INTO cloudeye_mark_point_infor(mark_name, tag_type_id, channel_id, mark_x, 
         mark_y, description, camera_id, add_time) values('${markName}', '${tagTypeId}', '${channelId}', 
-        '${markX}', '${markY}', '${description}', '${cameraId}', '${timeUtils.getSystemTime()}')`;
+        '${markX}', '${markY}', '${description}', '${cameraId}', '${timeUtils.getCurrentTime()}')`;
 
     logger.debug(`新增标点sql: ${insertSql}`);
     let [err] = await mysqlDB.insert(insertSql);
@@ -284,7 +284,7 @@ class CloudEyeService {
   async addUserCollectPoint(userId, pointId) {
     let res = new Response(),
       insertSql = `INSERT INTO cloudeye_user_point_r(user_id, point_id, add_time) values(${userId}, ${pointId}, 
-        '${timeUtils.getSystemTime()}')`;
+        '${timeUtils.getCurrentTime()}')`;
 
     logger.debug(`新增收藏点位sql: ${insertSql}`);
     let [err] = await mysqlDB.insert(insertSql);

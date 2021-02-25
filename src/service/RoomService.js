@@ -142,6 +142,7 @@ class RoomService {
     )})`;
     let sql = `${deleteSql};${insertSql}`;
 
+    logger.debug(`机房关联摄像头sql: ${sql}`);
     let [err, _] = await mysqlDB.execute(sql);
     if (err) {
       logger.error(`机房关联摄像头出错: err = ${err.message}`);

@@ -13,6 +13,26 @@ const deviceService = require("../../src/service/DeviceService");
 const channelService = require("../../src/service/ChannelService");
 
 /**
+ * 根据摄像头ID查询该摄像头关联的设备
+ */
+router.get("/getBindDeviceByChannelId", (req, res) => {
+  let channelId = req.query.channelId;
+  channelService.queryBindDeviceByChannelId(channelId).then((result) => {
+    res.send(result);
+  });
+});
+
+/**
+ * 查询摄像头所属机房未被关联的设备
+ */
+router.get("/getUnBindDeviceByChannelId", (req, res) => {
+  let channelId = req.query.channelId;
+  channelService.queryUnBindDeviceByChannelId(channelId).then((result) => {
+    res.send(result);
+  });
+});
+
+/**
  * 根据机房ID查询该机房下未被关联的设备
  */
 router.get("/getUnbindDeviceByRoomId", (req, res) => {
@@ -41,6 +61,20 @@ router.post("/updateFrameBindDevices", (req, res) => {
     delList = req.body.delList;
   feameService
     .updateFrameBindDevices(frameId, addList, delList)
+    .then((result) => {
+      res.send(result);
+    });
+});
+
+/**
+ * 更新摄像头关联的设备
+ */
+router.post("/updateChannelBindDevices", (req, res) => {
+  let channelId = req.body.channelId,
+    addList = req.body.addList,
+    delList = req.body.delList;
+  channelService
+    .updateChannelBindDevices(channelId, addList, delList)
     .then((result) => {
       res.send(result);
     });

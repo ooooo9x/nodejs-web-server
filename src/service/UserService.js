@@ -15,6 +15,7 @@ const ArrayUtils = require("../utils/ArrayUtils");
 const jwt = require("jsonwebtoken");
 
 const { isCheckCaptcha, des_key } = require("../../config/config");
+const operateLogService = require("./OperateLogService");
 
 /**
  * 用户Service
@@ -89,8 +90,8 @@ class UserService {
    * @param {String} roleCode 角色code
    * @param {Array} groupIds 组集合
    */
-  async updateUser(id, cnName, roleCode, groupId) {
-    let currentTime = timeUtils.getSystemTime();
+  async updateUser(id, cnName, roleCode, groupId, currentUser, ip) {
+    let currentTime = timeUtils.getCurrentTime();
 
     let res = new Response();
     if (StringUtils.isEmpty(id)) {
@@ -126,22 +127,6 @@ class UserService {
     let deleteGroupUserRelateSql = `delete from group_user_r where user_name = '${userName}'`;
 
     let insertGroupUserRelateSql = `insert into group_user_r(group_id, user_name) values(${groupId}, '${userName}')`;
-    // if (StringUtils.isEmpty(groupId)) {
-    //   insertGroupUserRelateSql = `insert into group_user_r(group_id, user_name) values`;
-    //   groupIds.forEach((gId) => {
-    //     insertGroupUserRelateSql += ` (${gId}, '${userName}'),`;
-    //   });
-    //   if (
-    //     insertGroupUserRelateSql.substr(
-    //       insertGroupUserRelateSql.indexOf("values") + "values".length
-    //     )
-    //   ) {
-    //     insertGroupUserRelateSql = insertGroupUserRelateSql.substr(
-    //       0,
-    //       insertGroupUserRelateSql.length - 1
-    //     );
-    //   }
-    // }
 
     let updateSql = `${updateUserSql};${deleteGroupUserRelateSql};${insertGroupUserRelateSql}`;
     logger.debug(`更新用户信息sql: ${updateSql}`);
@@ -150,6 +135,16 @@ class UserService {
       logger.info(`更新用户: ID = ${id} 信息出错, err = ${err1.message}`);
       return res.fail("更新用户信息出错").toString();
     }
+    
+    // 用户操作日志
+    operateLogService.save({
+      currentUser,
+      key: "user.edit",
+      params: { name: userName },
+      currentTime,
+      type: 1,
+      ip,
+    });
 
     return res.success(null, "用户信息更新成功").toString();
   }
@@ -162,8 +157,8 @@ class UserService {
    * @param {String} roleCode 角色code
    * @param {String} groupId 组ID
    */
-  async save(userName, cnName, pwd, roleCode, groupId) {
-    let currentTime = timeUtils.getSystemTime(),
+  async save(userName, cnName, pwd, roleCode, groupId, currentUser, ip) {
+    let currentTime = timeUtils.getCurrentTime(),
       res = new Response();
 
     if (StringUtils.isOneEmpty(userName, cnName, pwd)) {
@@ -206,14 +201,15 @@ class UserService {
       return res.fail("新增用户出错").toString();
     }
 
-    // err = await userGroupRelateService.saveList(userName, groupIds);
-    // if (err) {
-    //   res.fail("添加用户与组的关联出错");
-    //   logger.info(
-    //     `添加用户: userName = ${userName} 与组的关联出错, err = ${err.message}`
-    //   );
-    //   return res.toString();
-    // }
+    // 用户操作日志
+    operateLogService.save({
+      currentUser,
+      key: "user.add",
+      params: { name: userName },
+      currentTime,
+      type: 1,
+      ip,
+    });
 
     return res.success(null, "新增用户成功").toString();
   }
@@ -313,7 +309,7 @@ class UserService {
    * 根据ID删除用户
    * @param {Number} id 用户ID
    */
-  async deleteUserById(id) {
+  async deleteUserById(id, currentUser, ip) {
     let selectSql = `select * from user where id = ${id}`;
     let [err, user] = await mysqlDB.execute(selectSql);
     if (err) {
@@ -335,6 +331,16 @@ class UserService {
     if (err1) {
       throw err1;
     }
+    
+    // 用户操作日志
+    operateLogService.save({
+      currentUser,
+      key: "user.del",
+      params: { name: user.user_name },
+      currentTime: timeUtils.getCurrentTime(),
+      type: 1,
+      ip,
+    });
 
     return null;
   }
@@ -343,7 +349,7 @@ class UserService {
    * 批量删除用户
    * @param {Array} ids 删除用户ID集合
    */
-  async deleteUserByIds(ids) {
+  async deleteUserByIds(ids, currentUser, ip) {
     let res = new Response();
     if (ArrayUtils.isEmpty(ids)) {
       return res.fail("要删除的用户ID为空").toString();
@@ -352,7 +358,7 @@ class UserService {
     for (let i = 0, len = ids.length; i < len; i++) {
       if (!ids[i]) continue;
       try {
-        await this.deleteUserById(ids[i]);
+        await this.deleteUserById(ids[i], currentUser, ip);
       } catch (e) {
         logger.info(`用户: ID = ${ids[i]} 删除出错: err = ${e.message}`);
       }
@@ -590,7 +596,7 @@ class UserService {
    * @param {String} userName 用户登录名
    * @param {String} pwd 密码
    */
-  async changePwdByUserName(userName, pwd) {
+  async changePwdByUserName(userName, pwd, currentUser, ip) {
     let res = new Response();
     if (StringUtils.isEmpty(userName)) {
       return res.fail("用户登录名为空").toString();
@@ -621,6 +627,16 @@ class UserService {
       );
       return res.fail("更新失败").toString();
     }
+    
+    // 用户操作日志
+    operateLogService.save({
+      currentUser,
+      key: "user.changePwd",
+      params: { name: userName },
+      currentTime: timeUtils.getCurrentTime(),
+      type: 1,
+      ip,
+    });
 
     return res.success(null, "更新成功").toString();
   }

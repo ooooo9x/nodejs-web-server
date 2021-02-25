@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 // Service
 const groupService = require("../../src/service/GroupService");
+const requestIp = require('request-ip');
 
 /**
  * 新增组
@@ -9,8 +10,10 @@ const groupService = require("../../src/service/GroupService");
 router.put("/addGroup", (req, res, next) => {
   let name = req.body.name,
     nodes = req.body.node,
-    parentId = req.body.parentId;
-  groupService.save(name, parentId, nodes).then((result) => {
+    parentId = req.body.parentId,
+    currentUser = req.user.userName,
+    ip = requestIp.getClientIp(req);
+  groupService.save(name, parentId, nodes, currentUser, ip).then((result) => {
     res.send(result);
   });
 });
@@ -21,8 +24,10 @@ router.put("/addGroup", (req, res, next) => {
 router.put("/updateGroup", (req, res, next) => {
   let id = req.body.id,
     name = req.body.name,
-    node = req.body.node;
-  groupService.update(id, name, node).then((result) => {
+    node = req.body.node,
+    currentUser = req.user.userName,
+    ip = requestIp.getClientIp(req);
+  groupService.update(id, name, node, currentUser, ip).then((result) => {
     res.send(result);
   });
 });
@@ -46,9 +51,11 @@ router.get("/pageBy", (req, res) => {
     pageSize = req.query.pageSize,
     parentId = req.query.parentId,
     userName = req.query.userName;
-  groupService.pageByGroup(name, parentId, userName, pageNum, pageSize).then((result) => {
-    res.send(result);
-  });
+  groupService
+    .pageByGroup(name, parentId, userName, pageNum, pageSize)
+    .then((result) => {
+      res.send(result);
+    });
 });
 
 /**
@@ -65,8 +72,10 @@ router.get("/searchGroupById/:id", (req, res) => {
  * 删除组
  */
 router.delete("/removeGroupByIds", (req, res) => {
-  let ids = req.body.ids;
-  groupService.deleteGroupByIds(ids).then((result) => {
+  let ids = req.body.ids,
+    currentUser = req.user.userName,
+    ip = requestIp.getClientIp(req);
+  groupService.deleteGroupByIds(ids, currentUser, ip).then((result) => {
     res.send(result);
   });
 });

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 // Service
 const roleService = require("../../src/service/RoleService");
+const requestIp = require('request-ip');
 
 /**
  * 新增角色
@@ -10,19 +11,25 @@ router.put("/addRole", (req, res) => {
   let roleCode = req.body.roleCode,
     roleName = req.body.roleName,
     roleLevel = req.body.roleLevel,
-    privileges = req.body.privileges;
+    privileges = req.body.privileges,
+    currentUser = req.user.userName,
+    ip = requestIp.getClientIp(req);
 
-  roleService.saveRole(roleCode, roleName, roleLevel, privileges).then((result) => {
-    res.send(result);
-  });
+  roleService
+    .saveRole(roleCode, roleName, roleLevel, privileges, currentUser, ip)
+    .then((result) => {
+      res.send(result);
+    });
 });
 
 /**
  * 删除角色
  */
 router.delete("/deleteRole", (req, res) => {
-  let roleCodes = req.body.roleCodes;
-  roleService.deleteRole(roleCodes).then((result) => {
+  let roleCodes = req.body.roleCodes,
+    currentUser = req.user.userName,
+    ip = requestIp.getClientIp(req);
+  roleService.deleteRole(roleCodes, currentUser, ip).then((result) => {
     res.send(result);
   });
 });
@@ -36,9 +43,11 @@ router.get("/getRoleList", (req, res) => {
     level = req.query.roleLevel,
     pageNum = req.query.pageNum,
     pageSize = req.query.pageSize;
-  roleService.pageByRole(code, name, level, pageNum, pageSize).then((result) => {
-    res.send(result);
-  });
+  roleService
+    .pageByRole(code, name, level, pageNum, pageSize)
+    .then((result) => {
+      res.send(result);
+    });
 });
 
 /**
@@ -58,20 +67,14 @@ router.put("/editRole", (req, res, next) => {
   let id = req.body.id,
     roleName = req.body.roleName,
     roleLevel = req.body.roleLevel,
-    privileges = req.body.privileges;
-  roleService.updateRole(id, roleName, roleLevel, privileges).then((result) => {
-    res.send(result);
-  });
-});
-
-/**
- * 获取权限树接口
- */
-router.get("/getPrivilegeTree", (req, res) => {
-  let roleCode = req.query.roleCode;
-  roleService.getPrivilegeTree(roleCode).then((result) => {
-    res.send(result);
-  });
+    privileges = req.body.privileges,
+    currentUser = req.user.userName,
+    ip = requestIp.getClientIp(req);
+  roleService
+    .updateRole(id, roleName, roleLevel, privileges, currentUser, ip)
+    .then((result) => {
+      res.send(result);
+    });
 });
 
 /**
@@ -89,6 +92,26 @@ router.get("/getAllRoles", (req, res) => {
 router.get("/getRolesByLevel", (req, res) => {
   let level = req.query.level;
   roleService.getRolesByLevel(level).then((result) => {
+    res.send(result);
+  });
+});
+
+/**
+ * 获取权限树接口
+ */
+router.get("/getPrivilegeTree", (req, res) => {
+  let roleCode = req.query.roleCode;
+  roleService.getPrivilegeTree(roleCode).then((result) => {
+    res.send(result);
+  });
+});
+
+/**
+ * 根据角色code获取权限菜单
+ */
+router.get("/getPrivilegeByRoleCode", (req, res) => {
+  let roleCode = req.query.roleCode;
+  roleService.getPrivilegeByRoleCode(roleCode).then((result) => {
     res.send(result);
   });
 });

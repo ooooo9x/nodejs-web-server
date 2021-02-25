@@ -13,6 +13,31 @@ class NodeService {
   constructor() {}
 
   /**
+   * 根据摄像头id查询所属各节点名称
+   * @param {String} channelId 摄像头channel_id
+   */
+  async getNodesNameByChannelId(channelId) {
+    let res = new Response();
+    if (textUtils.isEmpty(channelId)) {
+      return res.fail("查询失败").toString();
+    }
+    let selectSql = `SELECT a.area_name, sa.subarea_name, s.site_name, r.room_name, c.channel_name 
+      FROM anhui_res_area a, anhui_res_subarea sa, anhui_res_site s, anhui_res_room r, device d, channel c, 
+      anhui_room_device_r rdr WHERE a.area_id = sa.area_id AND sa.subarea_id = s.subarea_id 
+      AND s.site_id = r.site_id AND r.room_id = rdr.room_id AND rdr.device_id = d.code_id 
+      AND d.device_id = c.channel_bearea AND c.channel_id = '${channelId}';`;
+
+    logger.debug(`根据摄像头id查询所属各节点名称sql: ${selectSql}`);
+    let [err, result] = await mysqlDB.selectOne(selectSql);
+    if (err) {
+      logger.error(`根据摄像头id查询所属各节点名称出错: err = ${err.message}`);
+      return res.fail("查询失败").toString();
+    }
+
+    return res.success(result).toString();
+  }
+
+  /**
    * 查询摄像头树
    * @param {Object} params 查询参数
    */
@@ -132,6 +157,8 @@ class NodeService {
     if (textUtils.isNotEmpty(deviceNameLike)) {
       channelSql += `AND cs.code IN (SELECT fc.channel_id FROM anhui_res_device d,anhui_res_frame_channel_r fc 
         WHERE d.device_name LIKE '%${deviceNameLike}%' AND d.frame_id=fc.frame_id) `;
+      channelSql += `OR cs.code IN (SELECT d.channel_id FROM anhui_res_device d 
+        WHERE d.device_name LIKE '%${deviceNameLike}%' AND d.channel_id IS NOT NULL) `;
     }
 
     if (textUtils.isNotEmpty(frameId) && textUtils.isNotEmpty(frameName)) {

@@ -3,6 +3,7 @@ const mysqlDB = require("../utils/MySqlDB");
 const StringUtils = require("../utils/StringUtils");
 const logger = require("../utils/logger");
 const timeUtils = require("../utils/timeUtils");
+const operateLogService = require("./OperateLogService");
 
 class RoleService {
   constructor() {}
@@ -37,7 +38,7 @@ class RoleService {
    * @param {String} roleName 角色名
    * @param {Array} privileges 权限code集合
    */
-  async updateRole(id, roleName, level, privileges) {
+  async updateRole(id, roleName, level, privileges, currentUser, ip) {
     let res = new Response();
     if (StringUtils.isEmpty(id)) {
       logger.info(`角色: ID = ${id}, 不存在`);
@@ -70,10 +71,9 @@ class RoleService {
     if (insertSql.substr(insertSql.indexOf("values") + "values".length)) {
       insertSql = insertSql.substr(0, insertSql.length - 1);
     }
-    let updateSql = `update role set role_name = '${roleName}', level = ${level}, edit_time = '${timeUtils.format(
-      new Date()
-    )}' 
-      where role_code = '${roleCode}';`;
+    let currentTime = timeUtils.format(new Date()),
+      updateSql = `update role set role_name = '${roleName}', level = ${level}, edit_time = '${currentTime}' 
+        where role_code = '${roleCode}';`;
     updateSql += `${deleteSql};${insertSql}`;
     logger.debug(`角色权限全删全增sql: ${updateSql}`);
 
@@ -82,6 +82,16 @@ class RoleService {
       logger.error(`角色权限全删全增出错: err = ${er.message}`);
       return res.fail("角色权限更新失败").toString();
     }
+
+    // 用户操作日志
+    operateLogService.save({
+      currentUser,
+      key: "role.edit",
+      params: { code: roleCode },
+      currentTime,
+      type: 1,
+      ip,
+    });
 
     return res.success().toString();
   }
@@ -92,7 +102,7 @@ class RoleService {
    * @param {String} name 角色名
    * @param {Array} privileges 权限code集合
    */
-  async saveRole(code, name, level, privileges) {
+  async saveRole(code, name, level, privileges, currentUser, ip) {
     let res = new Response();
     if (StringUtils.isEmpty(code)) {
       return res.fail("角色code为空").toString();
@@ -123,10 +133,9 @@ class RoleService {
       insertSql = `insert into privilege_role_r(privilege_code, role_code) 
         values ${insertSql.substr(0, insertSql.length - 1)}`;
     }
-    let updateSql = `insert into role(role_name, role_code, level, add_time, edit_time) 
-      values('${name}', '${code}', ${level}, '${timeUtils.format(
-      new Date()
-    )}', '${timeUtils.format(new Date())}')`;
+    let currentTime = timeUtils.format(new Date()),
+      updateSql = `insert into role(role_name, role_code, level, add_time, edit_time) 
+        values('${name}', '${code}', ${level}, '${currentTime}', '${currentTime}')`;
 
     let sql = `${updateSql};${insertSql}`;
     logger.debug(`新增角色sql: ${sql}`);
@@ -136,6 +145,16 @@ class RoleService {
       return res.fail("新增失败").toString();
     }
 
+    // 用户操作日志
+    operateLogService.save({
+      currentUser,
+      key: "role.add",
+      params: { code },
+      currentTime,
+      type: 1,
+      ip,
+    });
+
     return res.success().toString();
   }
 
@@ -143,7 +162,7 @@ class RoleService {
    * 删除角色
    * @param {Array} codes 角色code集合
    */
-  async deleteRole(codes) {
+  async deleteRole(codes, currentUser, ip) {
     let res = new Response();
     if (StringUtils.isEmpty(codes)) {
       return res.fail("角色code为空").toString();
@@ -173,6 +192,16 @@ class RoleService {
       logger.error(`删除角色出错: err = ${err.message}`);
       return res.fail("删除失败").toString();
     }
+
+    // 用户操作日志
+    operateLogService.save({
+      currentUser,
+      key: "role.del",
+      params: { code: codes.join(",") },
+      currentTime: timeUtils.getCurrentTime(),
+      type: 1,
+      ip,
+    });
 
     return res.success().toString();
   }
@@ -242,6 +271,40 @@ class RoleService {
   }
 
   /**
+   * 查询全部角色
+   */
+  async getAllRoles() {
+    let res = new Response(),
+      selectSql = "SELECT * FROM role";
+
+    logger.debug(`查询全部角色sql: ${selectSql}`);
+    let [err, roles] = await mysqlDB.select(selectSql);
+    if (err) {
+      logger.error(`查询全部角色出错: err = ${err.message}`);
+      return res.fail("查询失败").toString();
+    }
+
+    return res.success(roles).toString();
+  }
+
+  /**
+   * 查询角色,级别<=level
+   */
+  async getRolesByLevel(level) {
+    let res = new Response(),
+      selectSql = `SELECT * FROM role where level >= ${level}`;
+
+    logger.debug(`查询符合级别的角色sql: ${selectSql}`);
+    let [err, roles] = await mysqlDB.select(selectSql);
+    if (err) {
+      logger.error(`查询符合级别的角色出错: err = ${err.message}`);
+      return res.fail("查询失败").toString();
+    }
+
+    return res.success(roles).toString();
+  }
+
+  /**
    * 查询菜单权限
    * @param {String} code 角色code
    */
@@ -283,37 +346,26 @@ class RoleService {
   }
 
   /**
-   * 查询全部角色
+   * 根据角色code获取权限菜单
+   * @param {String} code 角色code
    */
-  async getAllRoles() {
-    let res = new Response(),
-      selectSql = "SELECT * FROM role";
+  async getPrivilegeByRoleCode(code) {
+    let res = new Response();
+    if (StringUtils.isEmpty(code)) {
+      logger.info("角色code为空");
+      return res.fail("角色code为空").toString();
+    }
+    let selectSql = `SELECT p.privilege_name as name, p.url as code FROM privilege p, privilege_role_r pr 
+      WHERE pr.role_code = '${code}' AND p.privilege_code = pr.privilege_code AND p.parent_id != 0`;
 
-    logger.debug(`查询全部角色sql: ${selectSql}`);
-    let [err, roles] = await mysqlDB.select(selectSql);
+    logger.debug(`根据角色code获取权限菜单sql: ${selectSql}`);
+    let [err, list] = await mysqlDB.select(selectSql);
     if (err) {
-      logger.error(`查询全部角色出错: err = ${err.message}`);
+      logger.error(`根据角色code获取权限菜单出错: err = ${err.message}`);
       return res.fail("查询失败").toString();
     }
 
-    return res.success(roles).toString();
-  }
-
-  /**
-   * 查询角色,级别<=level
-   */
-  async getRolesByLevel(level) {
-    let res = new Response(),
-      selectSql = `SELECT * FROM role where level >= ${level}`;
-
-    logger.debug(`查询符合级别的角色sql: ${selectSql}`);
-    let [err, roles] = await mysqlDB.select(selectSql);
-    if (err) {
-      logger.error(`查询符合级别的角色出错: err = ${err.message}`);
-      return res.fail("查询失败").toString();
-    }
-
-    return res.success(roles).toString();
+    return res.success(list).toString();
   }
 }
 

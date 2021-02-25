@@ -5,7 +5,6 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var Response = require("./src/utils/Response");
 
-var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/anhui/users");
 //引入人脸识别记录操作js
 var faceRecognitionInforRouter = require("./routes/anhui/faceRecognitionInfor");
@@ -41,7 +40,6 @@ var vpmApiRouter = require("./routes/coreView/vpm/vpmApi");
 
 // 云眼接口
 var cloudeye = require("./routes/jiangyin/cloudeye");
-const router = require("./routes/anhui/users");
 
 var app = express();
 
@@ -73,7 +71,6 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.use("/", indexRouter);
 app.use("/users", usersRouter);
 //初始化人脸识别记录管理接口类
 app.use("/faceRec", faceRecognitionInforRouter);

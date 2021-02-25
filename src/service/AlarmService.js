@@ -59,7 +59,7 @@ class AlarmService {
     (pageSize = parseInt(pageSize)), (startId = parseInt(startId));
 
     // '2020-06-18'
-    let timeStr = timeUtils.getNowTime();
+    let timeStr = timeUtils.getCurrentDate();
 
     //获取当前系统时间
     let sql = "";

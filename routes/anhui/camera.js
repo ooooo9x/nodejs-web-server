@@ -19,6 +19,16 @@ router.get("/rtmpScreenshot", (req, res) => {
 });
 
 /**
+ * 根据摄像头id查询所属各节点名称
+ */
+router.get("/getNodesNameByChannelId", (req, res) => {
+  let channelId = req.query.channelId;
+  nodeService.getNodesNameByChannelId(channelId).then((result) => {
+    res.send(result);
+  });
+});
+
+/**
  * 资源系统的摄像头树结构
  */
 router.get("/getResCameraTree", (req, res) => {

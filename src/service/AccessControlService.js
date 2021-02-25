@@ -101,6 +101,7 @@ class AccessControlService {
           username: c.username || "无",
           card_no: c.cardno || "无",
           opentime: c.opentime,
+          openmathod: c.openmathod || "未知"
         });
       });
 

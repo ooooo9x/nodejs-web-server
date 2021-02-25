@@ -22,7 +22,7 @@ var sqlStr="";
 // router.get('/getOrderAreaCountFromXj', function(req, res, next) {
 //
 //     //获取系统当前时间--年
-//     let systimeYear=timeUtils.getSystimeYear();
+//     let systimeYear=timeUtils.getCurrentYear();
 //
 //     //当年中欧订单货值统计结果
 //     let sql1="SELECT SUM(goods_size) AS goodSize,SUM(goods_worth) AS goodsWorth FROM (\n" +
@@ -72,7 +72,7 @@ var sqlStr="";
 router.get('/getOrderAreaCountFromXj', function(req, res, next) {
 
     //获取系统当前时间--年
-    let systimeYear=timeUtils.getSystimeYear();
+    let systimeYear=timeUtils.getCurrentYear();
 
     //当年中欧订单货值统计结果
     let sql1="SELECT SUM(goods_size) AS goodSize,SUM(goods_worth) AS goodsWorth FROM (\n" +
@@ -124,7 +124,7 @@ router.get('/getOrderAreaCountFromXj', function(req, res, next) {
 router.get('/getGoodsWorthCountFromXj', function(req, res, next) {
 
     //获取系统当前时间--年
-    let systimeYear=timeUtils.getSystimeYear();
+    let systimeYear=timeUtils.getCurrentYear();
 
     //当年出口货值统计结果
     let sql1="SELECT SUM(goods_size) AS goodSize,SUM(goods_worth) AS goodsWorth FROM xinjiang_export_orders_infor WHERE  start_tim LIKE '"+systimeYear+"%'";
@@ -170,10 +170,10 @@ router.get('/getGoodsWorthCountFromXj', function(req, res, next) {
 router.get('/getGoodsWeightCountFromXj', function(req, res, next) {
 
     //获取系统当前时间--年
-    let systimeYear=timeUtils.getSystimeYear();
+    let systimeYear=timeUtils.getCurrentYear();
 
     //获取系统当前时间---月
-    let systimeMonth=timeUtils.getSystimeMonth();
+    let systimeMonth=timeUtils.getCurrentMonth();
 
     //查询当年往月的统计结果
     let sql1="SELECT SUM(goods_size) AS num,transport_type FROM (\n" +
@@ -222,7 +222,7 @@ router.get('/getGoodsWeightCountFromXj', function(req, res, next) {
 router.get('/getGoodsTypeCountFromXj', function(req, res, next) {
 
     //获取系统当前时间
-    let systime=timeUtils.getNowTime();
+    let systime=timeUtils.getCurrentDate();
 
     let sql="SELECT COUNT(*) AS num,b.goods_type_name FROM (" +
         "SELECT * FROM xinjiang_export_orders_infor UNION ALL SELECT * FROM xinjiang_import_orders_infor" +
@@ -254,7 +254,7 @@ router.get('/getGoodsTypeCountFromXj', function(req, res, next) {
 router.get('/getTransportUtilsCountFromXj', function(req, res, next) {
 
     //获取系统当前时间
-    let systime=timeUtils.getNowTime();
+    let systime=timeUtils.getCurrentDate();
    // //出口统计
    //  let exeSql="SELECT COUNT(*) AS num,transport_type FROM `xinjiang_export_orders_infor` WHERE 1=1 AND start_tim LIKE '"+systime+"%' GROUP BY transport_type";
    //  //进口统计
@@ -368,7 +368,7 @@ router.get('/getOrderInforByOrderCodeFromXj', function(req, res, next) {
 router.get('/getMapOrderlistFromXj', function(req, res, next) {
 
     //获取系统当前时间
-    let timeStr=timeUtils.getNowTime();
+    let timeStr=timeUtils.getCurrentDate();
     //查询出口订单
     let execsql="SELECT order_code,start_region,start_region_localation,destination,destination_localation FROM xinjiang_export_orders_infor WHERE 1=1 AND start_tim LIKE '"+timeStr+"%'";
     //查询进口订单
@@ -440,7 +440,7 @@ router.get('/getOrderInforFromXj', function(req, res, next) {
     idStr="("+idStr+"0)";
 
     //获取系统当前时间
-    let timeStr=timeUtils.getNowTime();
+    let timeStr=timeUtils.getCurrentDate();
     //根据订单类型动态选择要查询的表名
     let tableName="";
     if(parseInt(req.query.type)==0){

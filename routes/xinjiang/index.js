@@ -66,7 +66,7 @@ router.get('/getFaceReportFromXj', function(req, res, next) {
     idStr="("+idStr+"0)";
 
     // let timeStr='2020-06-18';
-    let timeStr=timeUtils.getNowTime();
+    let timeStr=timeUtils.getCurrentDate();
 
     //获取当前系统时间
     let sql="";
@@ -116,7 +116,7 @@ router.get('/getCarReportFromXj', function(req, res, next) {
     idStr="("+idStr+"0)";
 
     // let timeStr='2020-06-18';
-    let timeStr=timeUtils.getNowTime();
+    let timeStr=timeUtils.getCurrentDate();
 
     //获取当前系统时间
     let sql="";
@@ -166,7 +166,7 @@ router.get('/getStartHintInforFromXj', function(req, res, next) {
     idStr="("+idStr+"0)";
 
     // let timeStr='2020-06-18';
-    let timeStr=timeUtils.getNowTime();
+    let timeStr=timeUtils.getCurrentDate();
 
     //获取当前系统时间
     let sql="";

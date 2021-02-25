@@ -55,7 +55,7 @@ class WorkerService {
 
     //获取人员当前位置
     let sqlNowLocation = `SELECT id,location FROM worker_location_info WHERE worker_code = '${workerCode}' 
-      AND room_code = '${roomId}' AND create_time LIKE '${timeUtils.getNowTime()}%' ORDER BY create_time ASC`,
+      AND room_code = '${roomId}' AND create_time LIKE '${timeUtils.getCurrentDate()}%' ORDER BY create_time ASC`,
       //获取当前机房的所有点位
       sqlAllLocation = `SELECT * FROM point_position WHERE room_code = '${roomId}'`;
 
@@ -260,11 +260,11 @@ class WorkerService {
     (pageSize = parseInt(pageSize)), (startId = parseInt(startId));
 
     // '2020-06-18';
-    let timeStr = timeUtils.getNowTime(),
+    let timeStr = timeUtils.getCurrentDate(),
       sql = "";
     if (startId === 0) {
       sql = `SELECT DISTINCT * FROM face_recognition_infor 
-        WHERE add_time LIKE '${timeStr}%'  LIMIT 0, ${pageSize}`;
+        WHERE add_time LIKE '${timeStr}%' order by add_time desc LIMIT 0, ${pageSize}`;
     } else {
       let idAry = [];
       for (let i = 1; i <= pageSize; i++) {
@@ -297,10 +297,47 @@ class WorkerService {
   }
 
   /**
+   * 人脸识别获取(首页)
+   * @param {Number} startId 上次查询最后一条数据的id
+   * @param {Number} pageSize 查询数量
+   * @param {String} ip ip
+   */
+  async getFaceRecUserImg1(pageSize = 8, ip) {
+    let res = new Response();
+
+    (pageSize = parseInt(pageSize));
+
+    // '2020-06-18';
+    let timeStr = timeUtils.getCurrentDate(),
+      sql = `SELECT DISTINCT * FROM face_recognition_infor 
+      WHERE add_time LIKE '${timeStr}%' order by add_time desc LIMIT 0, ${pageSize}`;
+
+    logger.debug(`人脸识别获取(首页)sql: ${sql}`);
+    let [err, result] = await mysqlDB.select(sql);
+    if (err) {
+      logger.error(`人脸识别获取(首页)出错: err=${err.message}`);
+      return res.fail("查询失败").toString();
+    }
+
+    if(ip.indexOf(network_ip.Intranet)===-1){
+      network_ip.img.map((item) => {
+        for (let i = 0; i < result.length; i++) {
+          if (result[i].worker_img.indexOf( item.Intranet)>-1) {
+            let img = result[i].worker_img;
+            let img_bak = channelService.replaceDomain(item.Extranet, img);
+            result[i].worker_img = img_bak;
+          }
+        }
+      });
+    }
+    return res.success(result).toString();
+  }
+
+  /**
    * 查询当日各地区机房人脸识别数(首页)
    */
   async getFaceRecSum() {
-    let startTime = timeUtils.getNowTime(),
+    let startTime = timeUtils.getCurrentDate(),
       res = new Response();
     let selectSql = `SELECT city, city_code, COUNT(*) AS num FROM face_recognition_infor 
       WHERE add_time >= '${startTime}' GROUP BY city ORDER BY city DESC`;

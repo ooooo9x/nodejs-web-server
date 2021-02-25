@@ -5,7 +5,9 @@ const nodeGroupRelateService = require("./NodeGroupRelateService");
 const logger = require("../utils/logger");
 const ArrayUtils = require("../utils/ArrayUtils");
 const StringUtils = require("../utils/StringUtils");
+const timeUtils = require("../utils/timeUtils");
 const Cache = require("../utils/Cache");
+const operateLogService = require("./OperateLogService");
 
 class GroupService {
   constructor() {}
@@ -15,9 +17,10 @@ class GroupService {
    * @param {String} name 组名称
    * @param {Array} nodes 节点集合
    */
-  async save(name, parentId, nodes) {
+  async save(name, parentId, nodes, currentUser, ip) {
     let res = new Response();
     if (textUtils.isEmpty(name) || ArrayUtils.isEmpty(nodes) || StringUtils.isEmpty(parentId)) {
+      logger.info(`组信息有误: name=${name}, nodes=${nodes}, parentId=${parentId}`);
       return res.fail("组信息有误").toString();
     }
 
@@ -41,6 +44,17 @@ class GroupService {
       res.success(null);
       logger.info("新建组和节点的关联成功");
     }
+
+    // 用户操作日志
+    operateLogService.save({
+      currentUser,
+      key: "group.add",
+      params: { name },
+      currentTime: timeUtils.getCurrentTime(),
+      type: 1,
+      ip,
+    });
+
     return res.toString();
   }
 
@@ -50,7 +64,7 @@ class GroupService {
    * @param {String} name 组名称
    * @param {Array} node 组关联的节点信息
    */
-  async update(id, name, node) {
+  async update(id, name, node, currentUser, ip) {
     let updateSql = `update \`group\` set name = '${name}' where id = ${id}`,
       deleteRelateSql = `delete from group_node_r where group_id = ${id}`,
       insertRelateSql = "";
@@ -73,6 +87,17 @@ class GroupService {
     await new Cache().clear();
 
     logger.info("更新成功");
+
+    // 用户操作日志
+    operateLogService.save({
+      currentUser,
+      key: "group.edit",
+      params: { name },
+      currentTime: timeUtils.getCurrentTime(),
+      type: 1,
+      ip,
+    });
+
     return res.success(null).toString();
   }
 
@@ -178,7 +203,7 @@ class GroupService {
    * 删除组
    * @param {Array} ids 要删除的组ID集合
    */
-  async deleteGroupByIds(ids) {
+  async deleteGroupByIds(ids, currentUser, ip) {
     let res = new Response();
     if (!ids || ids.length <= 0) {
       return res.fail("要删除的组ID为空").toString();
@@ -197,14 +222,25 @@ class GroupService {
       }
     }
     if (delIds && delIds.length > 0) {
-      let deleteRelateSql = `delete from group_node_r where group_id in (${delIds.join(
-          ","
-        )})`,
+      let selectSql = `select GROUP_CONCAT(name) as names from \`group\` where id in (${delIds.join(",")})`;
+      let [e, groupNames] = await mysqlDB.select(selectSql);
+      if (!e && groupNames) {
+        // 用户操作日志
+        operateLogService.save({
+          currentUser,
+          key: "group.del",
+          params: { name: groupNames[0].names },
+          currentTime: timeUtils.getCurrentTime(),
+          type: 1,
+          ip,
+        });
+      }
+      let deleteRelateSql = `delete from group_node_r where group_id in (${delIds.join(",")})`,
         deleteGroupSql = `delete from \`group\` where id in (${delIds.join(
           ","
         )})`;
       logger.debug(`删除组sql: ${deleteRelateSql};${deleteGroupSql}`);
-      let [err, result] = await mysqlDB.delete(
+      let [err] = await mysqlDB.delete(
         `${deleteRelateSql};${deleteGroupSql}`
       );
       if (err) {
